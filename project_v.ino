@@ -16,10 +16,15 @@
 #include "get.h"
 
 
-
+////////////////////TIMER SETUP////////////////////
 int _timer = TIMER_DEFAULT;
 uint32_t currentTime = 0;
-bool qwe = true;
+
+////////////////////STAGE SETUP////////////////////
+bool firstIn = true;
+int systemState = 0;
+
+
 
 ////////////////////SERIAL PROTOCOL/////////////////
 char data[20];
@@ -64,8 +69,8 @@ class Valve
       timeOne = 2;
     }
 
-    void Work () {
-      digitalWrite(valvePin12, valveState);
+    bool Work () {
+
       if (flagOne == true && (currentTime >= currTimeOne)) {
         digitalWrite(valvePin24, HIGH);
         flagOne = false;
@@ -73,11 +78,15 @@ class Valve
       if (flagTwo == true && (currentTime >= currTimeTwo)) { //только на выключение через определенное время
         valveState = HIGH;
         flagTwo = false;
+
       }
       if (lastValveState != valveState) {
         lastValveState = valveState;
         Serial.print("001,VLV," + String(valveId) + "," + String(!valveState) + ",SBIT");
       }
+
+      digitalWrite(valvePin12, valveState);
+      return (!valveState);
     }
 
     void Update (bool state, uint32_t timeSet) {
@@ -135,10 +144,11 @@ class Vacuum
 };
 
 class Level {
-    int levelPinLaser;       //пин клапана 12V
-    int levelPinReader;       //пин клапана 24V
-
-  public: bool levelState;    //состояние клапана
+    int levelPinLaser;                              //laser pin
+    int levelPinReader;                             //photoresistor pin
+    int supplayPin;                                 //5v pin
+  public: bool levelState;                          //laser work state
+  public: bool levelValue;                          //true - photoresistor on light
     bool lastValveState;
 
     bool flagOne;       //вклчюение уровня на время
@@ -149,44 +159,53 @@ class Level {
     uint32_t currTimeOne;
 
   public:
-    Level (int pinLaser, int pinReader, int id)
+    Level (int pinLaser, int pinReader, int supplay, int id)
     {
       levelPinLaser = pinLaser;
       levelPinReader = pinReader;
+      supplayPin = supplay;
       levelId = id;
       pinMode (levelPinLaser, OUTPUT);
+      pinMode (supplayPin, OUTPUT);
       levelState = LOW;
       lastLevelState = levelState;
       digitalWrite(levelPinLaser, LOW);
+      digitalWrite(supplayPin, HIGH);
     }
 
-    void Work() {
-      digitalWrite (levelPinLaser, levelState);
+    bool Work() {
+
       if (lastLevelState != levelState) {
         lastLevelState = levelState;
         Serial.print("001,LVL," + String(levelId) + "," + String(levelState) + ",SBIT");
       }
+      digitalWrite (levelPinLaser, levelState);
+      if (analogRead(levelPinReader) > 600)
+        levelValue = true;
+      else
+        levelValue = false;
+      return levelValue;
     }
 
     void Update(bool state) {
       levelState = state;
+      digitalWrite (levelPinLaser, levelState);
     }
 
 };
 
 //U8GLIB_ST7920_128X64_1X u8g(35, 33, 31, U8G_PIN_NONE);
-LiquidCrystal_I2C lcd(0x27, 20, 4);
+LiquidCrystal_I2C lcd(0x27, 16, 4);
 Valve vlvOne(A8, A9, 1);
 Valve vlvTwo(A10, A11, 2);
 
 Vacuum vacOne (8, A0);
 
-Level lvlOne (22, A4, 1);
+Level lvlOne (22, A4, A5, 1);
 
 void getState (void) {
-
   getTemp();
-  getLevel();
+  vacOne.GetVac();
 }
 
 void reciveMessage(void) {
@@ -210,11 +229,11 @@ void reciveMessage(void) {
     first = strtol(data_one, NULL, 0); //замена для atoi, т.к. некорректно работате с 32 битными
     second = strtol(data_two, NULL, 0);
     third = strtol(data_three, NULL, 0);
-
-    //Serial.println (String(first) + " " + String(second) + " " + String(third));
-    // Serial.print(String (unitID_in)+ " " + String (command_in)+ " " +String (data_one) + " " + String(data_two)+" " +String(data_three) );
-
-    if (String(command_in) == "GET") {
+    
+    if (String(command_in) == "STR") {
+      systemState = 0;
+    }
+    else if (String(command_in) == "GET") {
       Serial.print("001,DATA," + String(tempOne) + "," + String(vacOne.vacValue) + "," + String(vlvOne.valveState) + "," + String(vlvTwo.valveState) + "," + "SBIT");
 
     }
@@ -246,14 +265,23 @@ void reciveMessage(void) {
     else if (String(command_in) == "LVL") {
       lvlOne.Update(first);
     }
+
     // memset(&third, 0, sizeof(third));
     Serial.flush();
     i = 0;
   }
 }
 
+void stopFunc() {
 
-void timer_handle_interrupts(int timer) {        
+}
+
+void startFunc() {
+
+}
+
+
+void timer_handle_interrupts(int timer) {
   currentTime++;                                    //timer count in sec
 }
 
@@ -262,7 +290,7 @@ void timer_handle_interrupts(int timer) {
 void setup() {
   Serial.begin(115200);
   timer_init_ISR_1Hz(TIMER_DEFAULT);
-  lcd.init();                    
+  lcd.init();
   lcd.init();
   lcd.backlight();
 
@@ -270,14 +298,43 @@ void setup() {
 }
 
 void loop() {
-
   reciveMessage();
   getState();
+  lcd.setCursor(3, 0);
+  lcd.clear();
+  lcd.print(String(systemState));
+  switch (systemState) {                                //1,3,5,7,9,11... stage settings //2,4,6,8,10... stage start
+
+    case 0:                                             //reset all
+    systemState++;            
+    break;
+
+    case 1:
+      //time
+      vlvOne.Update (true, 20);
+      systemState++;
+      break;
+
+    case 2:
+      if (!vlvOne.Work())
+        systemState++;
+      break;
+
+    case 3:
+      //state
+      lvlOne.Update(true);
+      systemState++;
+
+      break;
+
+    case 4:
+      if (lvlOne.Work()) {
+        lvlOne.Update(false);
+        systemState++;
+      }
+      break;
+  }
   vlvOne.Work ();
   vlvTwo.Work ();
-  vacOne.GetVac();
   lvlOne.Work();
-  lcd.setCursor(3, 0);
-  lcd.print(String(vacOne.vacValue));
-
 }
