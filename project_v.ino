@@ -89,7 +89,6 @@ class Valve
       if (timeSet != 0) {
 
         currTimeTwo = timeSet + currentTime;
-        // Serial.println("ITS OK " + String (timeSet) + " " + String (currTimeTwo)+ " " + String (currentTime));
         flagTwo = true;
       }
 
@@ -247,77 +246,6 @@ void reciveMessage(void) {
     else if (String(command_in) == "LVL") {
       lvlOne.Update(first);
     }
-    /*
-      }
-      if (String(command_in) == "GET") {
-      //data
-      //  _delay_ms(100);
-      }
-      else if (String(command_in) == "STAGE") {
-      //Serial.println(String(data_in));
-      //      set_command();
-      //Serial.println(String(systemState));
-      }
-
-      else if (String(command_in) == "TERMON") {
-      sscanf(data_in, "%d", &tempThermostat);
-      // setThermostat (tempThermostat, REACTOR10, true);
-      }
-
-      else if (String(command_in) == "TERMOFF") {
-      //   sscanf(data_in, "%d", &tempThermostat);
-      //   setThermostat (tempThermostat, REACTOR10, false);
-
-      }
-
-      else if (String(command_in) == "VACON") {
-      //flag_vac = 0;
-      // sscanf(data_in, "%d", &set_vac_value);
-      // set_vac_state = true;
-      }
-
-      else if (String(command_in) == "VACOFF") {
-      //flag_vac = 0;
-      //sscanf(data_in, "%d", &set_vac_value);
-      set_vac_state = false;
-      }
-
-      else if (String(command_in) == "PUMPONB") {
-      //flag_pump_b = 0;
-      // sscanf(data_in, "%d", &set_pump_b_time);
-      set_pump_b_state = true;
-
-      }
-
-      else if (String(command_in) == "PUMPOFFB") {
-      // flag_pump_b = 0;
-      // sscanf(data_in, "%d", &set_pump_b_time);
-      set_pump_b_state = false;
-
-      }
-
-      else if (String(command_in) == "PUMPONR") {
-      // flag_pump_r = 0;
-      //sscanf(data_in, "%d", &set_pump_r_time);
-      set_pump_r_state = true;
-
-      }
-
-      else if (String(command_in) == "PUMPOFFR") {
-      //flag_pump_r = 0;
-      // sscanf(data_in, "%d", &set_pump_r_time);
-      set_pump_r_state = false;
-
-      }
-
-      else if (String(command_in) == "LASER") {
-      if (String(data_in) == "DONE")
-      flag_off_wait = 1;
-
-      }
-    */
-    // memset(first, 0, sizeof(int)*10);
-
     // memset(&third, 0, sizeof(third));
     Serial.flush();
     i = 0;
@@ -325,8 +253,8 @@ void reciveMessage(void) {
 }
 
 
-void timer_handle_interrupts(int timer) {        // обработчик таймера
-  currentTime++;
+void timer_handle_interrupts(int timer) {        
+  currentTime++;                                    //timer count in sec
 }
 
 
@@ -334,7 +262,7 @@ void timer_handle_interrupts(int timer) {        // обработчик тай�
 void setup() {
   Serial.begin(115200);
   timer_init_ISR_1Hz(TIMER_DEFAULT);
-  lcd.init();                      // initialize the lcd
+  lcd.init();                    
   lcd.init();
   lcd.backlight();
 
