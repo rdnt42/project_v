@@ -41,19 +41,17 @@ class Valve
     int valvePin24;       //пин клапана 24V
 
   public: bool valveState;    //состояние клапана
-
-
-
-    bool flagOne;       //первое вклчюение клапана
-    bool flagTwo;       //включение клапана на время
     bool lastValveState;
 
   public: int valveId;
-    uint16_t timeOne;
-    uint16_t timeTwo;
-    uint32_t currTimeOne;
-    uint32_t currTimeTwo;
 
+    bool startFlag;       //первое вклчюение клапана
+    bool timeFlag;       //включение клапана на время
+    uint32_t timeStart;
+    uint32_t timeWork;
+    
+    uint16_t timeOne;
+    
   public:
     Valve(int pin1, int pin2, int id)
     {
@@ -71,13 +69,13 @@ class Valve
 
     bool Work () {
 
-      if (flagOne == true && (currentTime >= currTimeOne)) {
+      if (startFlag == true && (currentTime >= timeStart)) {
         digitalWrite(valvePin24, HIGH);
-        flagOne = false;
+        startFlag = false;
       }
-      if (flagTwo == true && (currentTime >= currTimeTwo)) { //только на выключение через определенное время
+      if (timeFlag == true && (currentTime >= timeWork)) { //только на выключение через определенное время
         valveState = HIGH;
-        flagTwo = false;
+        timeFlag = false;
 
       }
       if (lastValveState != valveState) {
@@ -91,16 +89,14 @@ class Valve
 
     void Update (bool state, uint32_t timeSet) {
       valveState = !state;
-      flagOne = state;
-      currTimeOne = timeOne + currentTime;
+      startFlag = state;
+      timeStart = timeOne + currentTime;
       digitalWrite(valvePin12, valveState);
       digitalWrite(valvePin24, valveState);
       if (timeSet != 0) {
-
-        currTimeTwo = timeSet + currentTime;
-        flagTwo = true;
+        timeWork = timeSet + currentTime;
+        timeFlag = true;
       }
-
     }
 };
 
@@ -111,6 +107,8 @@ class Vacuum
     int vacPinRead;
     bool vacState;
     int vacSet;
+    uint32_t timeWork;
+    bool timeFlag;
   public: int vacValue;
 
   public:
@@ -120,6 +118,7 @@ class Vacuum
       vacPinRead = pinRead;
       vacState = false;
       vacSet = 750;
+      timeFlag = false;
 
     }
 
@@ -137,9 +136,39 @@ class Vacuum
       }
     }
 
-    //   void Work () {
+    void Work () {
+      if (timeFlag == true && (currentTime >= timeWork)) {
+        vacState = false;
+        timeFlag = false;
+      }
 
-    //  }
+
+      if (vacState && ((vacValue - vacSet ) > 0)) { //приводить к типу инт, инач бред выдает, разобраться
+        analogWrite (vacPinSet, 255);
+      }
+
+      else if (vacState && ((vacValue - vacSet  ) < 0) && ((vacValue - vacSet) > -3)) {
+        analogWrite (vacPinSet, 150);
+        // Serial.println (pressure - vac_value);
+      }
+
+      else if (vacState && ((vacValue - vacSet  ) < -3)) {
+        analogWrite (vacPinSet, 0);
+      }
+
+      else if (!vacState) {
+        analogWrite (vacPinSet, 0);
+      }
+    }
+
+    void Update (bool state, uint32_t timeSet) {
+      vacState = state;
+      if (timeSet != 0) {
+        timeWork = timeSet + currentTime;
+        timeFlag = true;
+      }
+
+    }
 
 };
 
@@ -229,9 +258,9 @@ void reciveMessage(void) {
     first = strtol(data_one, NULL, 0); //замена для atoi, т.к. некорректно работате с 32 битными
     second = strtol(data_two, NULL, 0);
     third = strtol(data_three, NULL, 0);
-    
+
     if (String(command_in) == "STR") {
-      systemState = 0;
+      systemState = 1;
     }
     else if (String(command_in) == "GET") {
       Serial.print("001,DATA," + String(tempOne) + "," + String(vacOne.vacValue) + "," + String(vlvOne.valveState) + "," + String(vlvTwo.valveState) + "," + "SBIT");
@@ -240,6 +269,8 @@ void reciveMessage(void) {
 
     else if (String(command_in) == "VAC") {
 
+      if (second == 1)
+        vacOne.Update(first, third);
     }
 
     else if (String(command_in) == "AIR") {
@@ -248,14 +279,10 @@ void reciveMessage(void) {
 
     else if (String(command_in) == "VLV") {
 
-      if (second == 1) {
-
+      if (second == 1)
         vlvOne.Update(first, third);
 
-      }
-
       else if (second == 2)
-
         vlvTwo.Update(first, third);
 
 
@@ -306,12 +333,12 @@ void loop() {
   switch (systemState) {                                //1,3,5,7,9,11... stage settings //2,4,6,8,10... stage start
 
     case 0:                                             //reset all
-    systemState++;            
-    break;
+      // systemState++;
+      break;
 
     case 1:
       //time
-      vlvOne.Update (true, 20);
+      vlvOne.Update (true, 53000);
       systemState++;
       break;
 
