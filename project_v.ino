@@ -4,9 +4,10 @@
 /////////////////////////////////send-recive data to WinForms///////////////////////
 
 
-//////!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!/////
-/////DON`T FORGET UPDATE COOMENTS//////////
-//////!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!/////
+///////////////////!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!/////
+///////////////////DON`T FORGET UPDATE COOMENTS//////////
+///////////////////!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!/////
+///////////////////INCLUDE LIBRARIES///////////////////
 #include <timer-api.h>
 #include <timer_setup.h>
 #include <SPI.h>
@@ -21,37 +22,26 @@ int _timer = TIMER_DEFAULT;
 uint32_t currentTime = 0;
 
 ////////////////////STAGE SETUP////////////////////
-bool firstIn = true;
-int systemState = 0;
-
-
-
-////////////////////SERIAL PROTOCOL/////////////////
-char data[20];
-char unitID_in[10];
-char command_in[10];
-char data_one[10];
-char data_two[10];
-char data_three [10];
-uint8_t i = 0;
+int systemState = 0;           //start state
 
 class Valve
 {
-    int valvePin12;       //пин клапана 12V
-    int valvePin24;       //пин клапана 24V
 
-  public: bool valveState;    //состояние клапана
-    bool lastValveState;
+  public: int valveId;         //id valve
+    int valvePin12;            //pin 12V relay
+    int valvePin24;             //pin 24V relay
 
-  public: int valveId;
+  public: bool valveState;     //ON/OFF state
+    bool lastValveState;       // if lastValveState!=valveState => state changed from serial or systemState
 
-    bool startFlag;       //первое вклчюение клапана
-    bool timeFlag;       //включение клапана на время
+
+    bool startFlag;           //первое вклчюение клапана
+    bool timeFlag;            //включение клапана на время
     uint32_t timeStart;
     uint32_t timeWork;
-    
+
     uint16_t timeOne;
-    
+
   public:
     Valve(int pin1, int pin2, int id)
     {
@@ -60,14 +50,14 @@ class Valve
       valvePin24 = pin2;
       pinMode (valvePin12, OUTPUT);
       pinMode (valvePin24, OUTPUT);
-      valveState = HIGH;
-      lastValveState = valveState;
+      valveState = HIGH;             
+      lastValveState = valveState;      
       digitalWrite(valvePin12, HIGH);
       digitalWrite(valvePin24, HIGH);
       timeOne = 2;
     }
 
-    bool Work () {
+    bool Work () {                                //cycle work
 
       if (startFlag == true && (currentTime >= timeStart)) {
         digitalWrite(valvePin24, HIGH);
@@ -87,7 +77,7 @@ class Valve
       return (!valveState);
     }
 
-    void Update (bool state, uint32_t timeSet) {
+    void Update (bool state, uint32_t timeSet) { //update state from serial or systemState
       valveState = !state;
       startFlag = state;
       timeStart = timeOne + currentTime;
@@ -103,12 +93,12 @@ class Valve
 class Vacuum
 {
 
-    int vacPinSet;
-    int vacPinRead;
-    bool vacState;
-    int vacSet;
-    uint32_t timeWork;
-    bool timeFlag;
+    int vacPinSet;            //PWM pin to vac
+    int vacPinRead;           //analog read from vac station
+    bool vacState;            //ON/OFF state
+    int vacSet;               //set vac value
+    uint32_t timeWork;        //set work time
+    bool timeFlag;            //flag to ON vac with time
   public: int vacValue;
 
   public:
@@ -143,13 +133,12 @@ class Vacuum
       }
 
 
-      if (vacState && ((vacValue - vacSet ) > 0)) { //приводить к типу инт, инач бред выдает, разобраться
+      if (vacState && ((vacValue - vacSet ) > 0)) { 
         analogWrite (vacPinSet, 255);
       }
 
       else if (vacState && ((vacValue - vacSet  ) < 0) && ((vacValue - vacSet) > -3)) {
         analogWrite (vacPinSet, 150);
-        // Serial.println (pressure - vac_value);
       }
 
       else if (vacState && ((vacValue - vacSet  ) < -3)) {
@@ -238,6 +227,16 @@ void getState (void) {
 }
 
 void reciveMessage(void) {
+  ////////////////////SERIAL PROTOCOL/////////////////
+  //example request 001,ID,COMMAND,DATA_ONE,DATA_TWO,DATA_THREE
+  //example answer  001,ID,COMMAND,DATA_ONE,DATA_TWO,DATA_THREE,SBIT
+  char data[20];         //DATA BUFFER
+  char unitID_in[10];    // ID device
+  char command_in[10];   //command, 3 letters
+  char data_one[10];     //data
+  char data_two[10];
+  char data_three [10];
+  uint8_t i = 0;
   if (Serial.available() > 0) {
     while (Serial.available()) {
       data [i] = Serial.read();
@@ -295,7 +294,6 @@ void reciveMessage(void) {
 
     // memset(&third, 0, sizeof(third));
     Serial.flush();
-    i = 0;
   }
 }
 
@@ -359,9 +357,11 @@ void loop() {
         lvlOne.Update(false);
         systemState++;
       }
+       lvlOne.Work();           //work while not TRUE
       break;
   }
-  vlvOne.Work ();
-  vlvTwo.Work ();
-  lvlOne.Work();
+//  vlvOne.Work ();
+//  vlvTwo.Work ();
+//lvlOne.Work();
+ 
 }
