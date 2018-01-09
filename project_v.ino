@@ -23,6 +23,27 @@ uint32_t currentTime = 0;
 
 ////////////////////STAGE SETUP////////////////////
 int systemState = 0;           //start state
+enum STATE { //system state
+  WELCOME,
+  STAGE1,
+  STAGE2,
+  STAGE3,
+  STAGE4,
+  STAGE5,
+  STAGE6,
+  STAGE7,
+  STAGE8,
+  STAGE9,
+  STAGE10,
+  LOCKED,
+  MENU,
+  STOP,
+  END,
+  ERRORS,
+  SYS_IDLE,
+  WAIT,
+
+};
 
 class Valve
 {
@@ -318,29 +339,29 @@ void loop() {
   lcd.print(String(systemState));
   switch (systemState) {                                //1,3,5,7,9,11... stage settings //2,4,6,8,10... stage start
 
-    case 0:                                             //reset all
+    case WELCOME:                                             //reset all
       // systemState++;
       break;
 
-    case 1:
+    case STAGE1:
       //time
       vlvOne.Update (true, 53000);
       systemState++;
       break;
 
-    case 2:
+    case STAGE2:
       if (!vlvOne.Work())
         systemState++;
       break;
 
-    case 3:
+    case STAGE3:
       //state
       lvlOne.Update(true);
       systemState++;
 
       break;
 
-    case 4:
+    case STAGE4:
       if (lvlOne.Work()) {
         lvlOne.Update(false);
         systemState++;
