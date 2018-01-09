@@ -23,6 +23,28 @@ uint32_t currentTime = 0;
 
 ////////////////////STAGE SETUP////////////////////
 int systemState = 0;           //start state
+enum STATE { //system state
+  WELCOME,
+  STAGE1,
+  STAGE2,
+  STAGE3,
+  STAGE4,
+  STAGE5,
+  STAGE6,
+  STAGE7,
+  STAGE8,
+  STAGE9,
+  STAGE10,
+  LOCKED,
+  MENU,
+  STOP,
+  END,
+  ERRORS,
+  SYS_IDLE,
+  WAIT,
+
+};
+
 
 class Valve
 {
@@ -50,8 +72,8 @@ class Valve
       valvePin24 = pin2;
       pinMode (valvePin12, OUTPUT);
       pinMode (valvePin24, OUTPUT);
-      valveState = HIGH;             
-      lastValveState = valveState;      
+      valveState = HIGH;
+      lastValveState = valveState;
       digitalWrite(valvePin12, HIGH);
       digitalWrite(valvePin24, HIGH);
       timeOne = 2;
@@ -74,10 +96,10 @@ class Valve
       }
 
       digitalWrite(valvePin12, valveState);
-      return (!valveState);
+      return (valveState);
     }
 
-    void Update (bool state, uint32_t timeSet) { //update state from serial or systemState
+    void Update (bool state, uint32_t timeSet = 0) { //update state from serial or systemState
       valveState = !state;
       startFlag = state;
       timeStart = timeOne + currentTime;
@@ -133,7 +155,7 @@ class Vacuum
       }
 
 
-      if (vacState && ((vacValue - vacSet ) > 0)) { 
+      if (vacState && ((vacValue - vacSet ) > 0)) {
         analogWrite (vacPinSet, 255);
       }
 
@@ -150,7 +172,7 @@ class Vacuum
       }
     }
 
-    void Update (bool state, uint32_t timeSet) {
+    void Update (bool state, uint32_t timeSet = 0) {
       vacState = state;
       if (timeSet != 0) {
         timeWork = timeSet + currentTime;
@@ -296,6 +318,18 @@ void reciveMessage(void) {
   }
 }
 
+bool waitTime (uint32_t time) {
+  static uint32_t millisPrev;
+  int countTime = (int)currentTime - (int)time - (int)millisPrev;
+  // Serial.println (String(abs(countTime)));
+  Serial.println (String((int32_t)(time + millisPrev - currentTime)) );
+  if ( (int32_t)(time + millisPrev - currentTime) <= 0 ) {
+    millisPrev = currentTime;
+    return true;
+  }
+  return false;
+}
+
 void timer_handle_interrupts(int timer) {
   currentTime++;                                    //timer count in sec
 }
@@ -316,40 +350,63 @@ void loop() {
   lcd.setCursor(3, 0);
   lcd.clear();
   lcd.print(String(systemState));
-  switch (systemState) {                                //1,3,5,7,9,11... stage settings //2,4,6,8,10... stage start
+  switch (systemState) {                                     //1,3,5,7,9,11... stage settings //2,4,6,8,10... stage start
 
-    case 0:                                             //reset all
-      // systemState++;
-      break;
-
-    case 1:
-      //time
-      vlvOne.Update (true, 53000);
+    case WELCOME:                                            //reset all
+      //stop all
       systemState++;
       break;
 
-    case 2:
-      if (!vlvOne.Work())
+    case STAGE1:
+      //tempThermostat = 24;
+      // setThermostat (tempThermostat, REACTOR10, true);
+      if (waitTime(54000))                                   //wait stage
         systemState++;
       break;
 
-    case 3:
-      //state
+    case STAGE2:
       lvlOne.Update(true);
       systemState++;
-
       break;
 
-    case 4:
-      if (lvlOne.Work()) {
+    case STAGE3:
+      if (lvlOne.Work()) {                                  //work while not TRUE
         lvlOne.Update(false);
         systemState++;
       }
-       lvlOne.Work();           //work while not TRUE
+      break;
+
+    case STAGE4:
+      if (waitTime(3600))
+        systemState++;
+      break;
+
+    case STAGE5:
+      if (waitTime(3600))
+        systemState++;
+      break;
+
+    case STAGE6:
+      //setThermostat (tempThermostat, REACTOR10, true);
+      vacOne.Update (true);
+      break;
+
+    case STAGE7:
+      if (waitTime(3600))
+        systemState++;
+      vacOne.Work();
+
+    case STAGE8:
+      if (waitTime(3600)) {
+        vacOne.Update (false);
+        systemState++;
+      }
+      vacOne.Work();
+
+    case STAGE9:
+      if (waitTime(3600))
+        systemState++;
+      vacOne.Work();
       break;
   }
-//  vlvOne.Work ();
-//  vlvTwo.Work ();
-//lvlOne.Work();
- 
 }
