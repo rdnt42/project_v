@@ -35,8 +35,8 @@ class Valve
     bool lastValveState;       // if lastValveState!=valveState => state changed from serial or systemState
 
 
-    bool startFlag;           //первое вклчюение клапана
-    bool timeFlag;            //включение клапана на время
+    bool startFlag;           //first time flag
+    bool timeFlag;            //set time flag
     uint32_t timeStart;
     uint32_t timeWork;
 
@@ -209,7 +209,6 @@ class Level {
       levelState = state;
       digitalWrite (levelPinLaser, levelState);
     }
-
 };
 
 //U8GLIB_ST7920_128X64_1X u8g(35, 33, 31, U8G_PIN_NONE);
@@ -297,20 +296,9 @@ void reciveMessage(void) {
   }
 }
 
-void stopFunc() {
-
-}
-
-void startFunc() {
-
-}
-
-
 void timer_handle_interrupts(int timer) {
   currentTime++;                                    //timer count in sec
 }
-
-
 
 void setup() {
   Serial.begin(115200);
