@@ -16,10 +16,17 @@
 //#include "U8glib.h"
 #include "get.h"
 
-
+char data[20];         //DATA BUFFER
+char unitID_in[10];    // ID device
+char command_in[10];   //command, 3 letters
+char data_one[10];     //data
+char data_two[10];
+char data_three [10];
+uint8_t i = 0;
 ////////////////////TIMER SETUP////////////////////
 int _timer = TIMER_DEFAULT;
 uint32_t currentTime = 0;
+
 
 ////////////////////STAGE SETUP////////////////////
 int systemState = 0;           //start state
@@ -118,6 +125,7 @@ class Vacuum
     int vacPinSet;            //PWM pin to vac
     int vacPinRead;           //analog read from vac station
     bool vacState;            //ON/OFF state
+    bool lastVacState;
     int vacSet;               //set vac value
     uint32_t timeWork;        //set work time
     bool timeFlag;            //flag to ON vac with time
@@ -129,6 +137,7 @@ class Vacuum
       vacPinSet = pinSet;
       vacPinRead = pinRead;
       vacState = false;
+      lastVacState = vacState;
       vacSet = 750;
       timeFlag = false;
 
@@ -153,7 +162,11 @@ class Vacuum
         vacState = false;
         timeFlag = false;
       }
-
+      
+      if (lastVacState != vacState) {
+        lastVacState = vacState;
+        Serial.print("001,VAC,1,"+ String(vacState) + ",SBIT");
+      }
 
       if (vacState && ((vacValue - vacSet ) > 0)) {
         analogWrite (vacPinSet, 255);
@@ -172,12 +185,13 @@ class Vacuum
       }
     }
 
-    void Update (bool state, uint32_t timeSet = 0) {
+    void Update (bool state, uint32_t valueSet = 750) {
       vacState = state;
-      if (timeSet != 0) {
+      vacSet = valueSet;
+      /*if (timeSet != 0) {
         timeWork = timeSet + currentTime;
         timeFlag = true;
-      }
+      }*/
 
     }
 
@@ -251,13 +265,7 @@ void reciveMessage(void) {
   ////////////////////SERIAL PROTOCOL/////////////////
   //example request 001,ID,COMMAND,DATA_ONE,DATA_TWO,DATA_THREE
   //example answer  001,ID,COMMAND,DATA_ONE,DATA_TWO,DATA_THREE,SBIT
-  char data[20];         //DATA BUFFER
-  char unitID_in[10];    // ID device
-  char command_in[10];   //command, 3 letters
-  char data_one[10];     //data
-  char data_two[10];
-  char data_three [10];
-  uint8_t i = 0;
+
   if (Serial.available() > 0) {
     while (Serial.available()) {
       data [i] = Serial.read();
@@ -289,8 +297,8 @@ void reciveMessage(void) {
 
     else if (String(command_in) == "VAC") {
 
-      if (second == 1)
-        vacOne.Update(first, third);
+      if (third == 1)
+        vacOne.Update(first, second);
     }
 
     else if (String(command_in) == "AIR") {
@@ -299,11 +307,12 @@ void reciveMessage(void) {
 
     else if (String(command_in) == "VLV") {
 
-      if (second == 1)
-        vlvOne.Update(first, third);
 
-      else if (second == 2)
-        vlvTwo.Update(first, third);
+      if (third == 1)
+        vlvOne.Update(first, second);
+
+      else if (third == 2)
+        vlvTwo.Update(first, second);
 
 
       //Serial.println (String(third));
@@ -312,9 +321,9 @@ void reciveMessage(void) {
     else if (String(command_in) == "LVL") {
       lvlOne.Update(first);
     }
-
     // memset(&third, 0, sizeof(third));
     Serial.flush();
+    i = 0;
   }
 }
 
@@ -350,11 +359,11 @@ void loop() {
   lcd.setCursor(3, 0);
   lcd.clear();
   lcd.print(String(systemState));
-  switch (systemState) {                                     //1,3,5,7,9,11... stage settings //2,4,6,8,10... stage start
+  /*switch (systemState) {                                     //1,3,5,7,9,11... stage settings //2,4,6,8,10... stage start
 
     case WELCOME:                                            //reset all
       //stop all
-      systemState++;
+      //systemState++;
       break;
 
     case STAGE1:
@@ -408,5 +417,8 @@ void loop() {
         systemState++;
       vacOne.Work();
       break;
-  }
+    }*/
+  vlvOne.Work ();
+  vlvTwo.Work ();
+  vacOne.Work ();
 }

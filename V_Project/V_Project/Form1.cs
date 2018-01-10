@@ -85,6 +85,10 @@ namespace V_Project
                     if (data_id == "1")
                         progressBarLvl.Value = Convert.ToInt16(data_state);
                     break;
+                case "VAC":
+                    if (data_id == "1")
+                        progressBarVac.Value = Convert.ToInt16(data_state);
+                    break;
             }
         }
 
@@ -304,17 +308,17 @@ namespace V_Project
 
         private void btnVacOn_Click(object sender, EventArgs e)
         {
-            myport.WriteLine("001,VAC," + textBoxVacSet.Text);
+            myport.WriteLine("001,VAC,1," + textBoxVacSet.Text+ ",1");
         }
 
         private void btnVacOff_Click(object sender, EventArgs e)
         {
-            myport.WriteLine("001,VAC,750");
+            myport.WriteLine("001,VAC,0,750,1");
         }
 
         private void btnVlv1On_Click(object sender, EventArgs e)
         {
-            myport.WriteLine("001,VLV,1,1," + textBoxVlv1.Text);
+            myport.WriteLine("001,VLV,1," + textBoxVlv1.Text +",1" );
         }
 
         private void btnVlv1Off_Click(object sender, EventArgs e)
@@ -324,7 +328,7 @@ namespace V_Project
 
         private void btnVlv2On_Click(object sender, EventArgs e)
         {
-            myport.WriteLine("001,VLV,1,2," + textBoxVlv2.Text);
+            myport.WriteLine("001,VLV,1," + textBoxVlv2.Text + ",2");
         }
 
         private void btnVlv2Off_Click(object sender, EventArgs e)

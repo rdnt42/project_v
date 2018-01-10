@@ -10,3 +10,14 @@ D:\arduino_project\V_Project\V_Project\obj\Debug\V_Project.csproj.GenerateResour
 D:\arduino_project\V_Project\V_Project\obj\Debug\V_Project.csproj.CoreCompileInputs.cache
 D:\arduino_project\V_Project\V_Project\obj\Debug\V_Project.exe
 D:\arduino_project\V_Project\V_Project\obj\Debug\V_Project.pdb
+D:\arduino_project\!vm1500_work\vm_1500_work\project_v\V_Project\V_Project\bin\Debug\V_Project.exe.config
+D:\arduino_project\!vm1500_work\vm_1500_work\project_v\V_Project\V_Project\bin\Debug\V_Project.exe
+D:\arduino_project\!vm1500_work\vm_1500_work\project_v\V_Project\V_Project\bin\Debug\V_Project.pdb
+D:\arduino_project\!vm1500_work\vm_1500_work\project_v\V_Project\V_Project\bin\Debug\USBHIDDRIVER.pdb
+D:\arduino_project\!vm1500_work\vm_1500_work\project_v\V_Project\V_Project\obj\Debug\V_Project.csprojResolveAssemblyReference.cache
+D:\arduino_project\!vm1500_work\vm_1500_work\project_v\V_Project\V_Project\obj\Debug\V_Project.Form1.resources
+D:\arduino_project\!vm1500_work\vm_1500_work\project_v\V_Project\V_Project\obj\Debug\V_Project.Properties.Resources.resources
+D:\arduino_project\!vm1500_work\vm_1500_work\project_v\V_Project\V_Project\obj\Debug\V_Project.csproj.GenerateResource.Cache
+D:\arduino_project\!vm1500_work\vm_1500_work\project_v\V_Project\V_Project\obj\Debug\V_Project.csproj.CoreCompileInputs.cache
+D:\arduino_project\!vm1500_work\vm_1500_work\project_v\V_Project\V_Project\obj\Debug\V_Project.exe
+D:\arduino_project\!vm1500_work\vm_1500_work\project_v\V_Project\V_Project\obj\Debug\V_Project.pdb
