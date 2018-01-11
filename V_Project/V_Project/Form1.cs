@@ -184,6 +184,8 @@ namespace V_Project
         private void btn_start_Click(object sender, EventArgs e)
         {
             myport.WriteLine("001,STR,1");
+            if (!timer1.Enabled == true)
+                timer1.Enabled = true;
             // timer1.Enabled = true;
             // btn_next_stage.Enabled = true;
             // StreamWriter file = new StreamWriter("D:\\arduino_project\\vm1500\\data\\test.txt");
@@ -239,6 +241,8 @@ namespace V_Project
             myport.Close();
             openSerial(false);
             progressBarState.Value = 0;
+            if (timer1.Enabled == true)
+                timer1.Enabled = false;
         }
 
         void openSerial(bool state)
