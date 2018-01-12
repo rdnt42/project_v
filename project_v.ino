@@ -52,6 +52,14 @@ enum STATE { //system state
 
 };
 
+void sendPack(String pack) {
+  String formPack = "STR,001," + pack + ",";
+  formPack += String (formPack.length() + 6) + ",STP";
+  Serial.print (formPack);
+  _delay_ms(50);
+}
+
+
 
 class Valve
 {
@@ -99,8 +107,9 @@ class Valve
       }
       if (lastValveState != valveState) {
         lastValveState = valveState;
-        Serial.print("001,VLV," + String(valveId) + "," + String(!valveState) + ",SBIT");
-        _delay_ms(50);
+        //Serial.print("001,VLV," + String(valveId) + "," + String(!valveState) + ",SBIT");
+        // _delay_ms(50);
+        sendPack("VLV," + String(valveId) + "," + String(!valveState));
       }
 
       digitalWrite(valvePin12, valveState);
@@ -167,8 +176,9 @@ class Vacuum
 
       if (lastVacState != vacState) {
         lastVacState = vacState;
-        Serial.print("001,VAC,1," + String(vacState) + ",SBIT");
-        _delay_ms(50);
+        //Serial.print("001,VAC,1," + String(vacState) + ",SBIT");
+        // _delay_ms(50);
+        sendPack("VAC,1," + String(vacState));
       }
 
       if (vacState && ((vacValue - vacSet ) > 0)) {
@@ -234,8 +244,9 @@ class Level {
 
       if (lastLevelState != levelState) {
         lastLevelState = levelState;
-        Serial.print("001,LVL," + String(levelId) + "," + String(levelState) + ",SBIT");
-        _delay_ms(50);
+        //Serial.print("001,LVL," + String(levelId) + "," + String(levelState) + ",SBIT");
+        sendPack ("LVL," + String(levelId) + "," + String(levelState));
+        //  _delay_ms(50);
       }
       digitalWrite (levelPinLaser, levelState);
       if (analogRead(levelPinReader) > 600)
@@ -265,6 +276,13 @@ void getState (void) {
   vacOne.GetVac();
 }
 
+void resetAll() {
+  lvlOne.Update(false);
+  vlvOne.Update(0, 0);
+  vlvTwo.Update(0, 0);
+  vacOne.Update (false);
+}
+
 void reciveMessage(void) {
   ////////////////////SERIAL PROTOCOL/////////////////
   //example request 001,ID,COMMAND,DATA_ONE,DATA_TWO,DATA_THREE
@@ -292,12 +310,26 @@ void reciveMessage(void) {
     third = strtol(data_three, NULL, 0);
 
     if (String(command_in) == "STR") {
-      systemState = 1;
+      systemState = STAGE1;
     }
+
+    if (String(command_in) == "STP") {
+      systemState = SYS_IDLE;
+    }
+
+    if (String(command_in) == "STG") {
+      resetAll ();
+      systemState ++;
+    }
+
+
+
     else if (String(command_in) == "GET") {
-      Serial.print("001,DATA," + String(tempOne) + "," + String(vacOne.vacValue) + "," + String(vlvOne.valveState) + ","
-                   + String(vlvTwo.valveState) + "," + String(systemState) + "," + "SBIT");
-      _delay_ms(50);
+      //   Serial.print("001,DATA," + String(tempOne) + "," + String(vacOne.vacValue) + "," + String(vlvOne.valveState) + ","
+      //               + String(vlvTwo.valveState) + "," + String(systemState) + "," + "SBIT");
+      //  _delay_ms(50);
+      sendPack("DATA," + String(tempOne) + "," + String(vacOne.vacValue) + "," + String(vlvOne.valveState) + ","
+               + String(vlvTwo.valveState) + "," + String(systemState));
     }
 
     else if (String(command_in) == "VAC") {
@@ -348,6 +380,8 @@ void timer_handle_interrupts(int timer) {
   currentTime++;                                    //timer count in sec
 }
 
+
+
 void setup() {
   Serial.begin(115200);
   timer_init_ISR_1Hz(TIMER_DEFAULT);
@@ -379,7 +413,7 @@ void loop() {
     case STAGE2:
       //tempThermostat = 24;
       // setThermostat (tempThermostat, REACTOR10, true);
-      if (waitTime(600)) {//(59400))  {                                  //wait stage
+      if (waitTime(21600)) {//(59400))  {                                  //wait stage
         vlvOne.Update(0, 0);
         systemState++;
       }
@@ -438,14 +472,12 @@ void loop() {
       break;
 
     case SYS_IDLE:
-      lvlOne.Update(false);
-      vlvOne.Update(0, 0);
-      vlvTwo.Update(0, 0);
-      vacOne.Update (false);
+      resetAll();
       systemState = WELCOME;
 
       break;
   }
+  lvlOne.Work ();
   vlvOne.Work ();
   vlvTwo.Work ();
   vacOne.Work ();

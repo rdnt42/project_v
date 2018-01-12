@@ -859,6 +859,7 @@
             // progressBarLvl
             // 
             this.progressBarLvl.Location = new System.Drawing.Point(509, 602);
+            this.progressBarLvl.Maximum = 1;
             this.progressBarLvl.Name = "progressBarLvl";
             this.progressBarLvl.Size = new System.Drawing.Size(38, 23);
             this.progressBarLvl.TabIndex = 73;
