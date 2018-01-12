@@ -16,7 +16,7 @@
 //#include "U8glib.h"
 #include "get.h"
 
-char data[20];         //DATA BUFFER
+char data[60];         //DATA BUFFER
 char unitID_in[10];    // ID device
 char command_in[10];   //command, 3 letters
 char data_one[10];     //data
@@ -205,9 +205,7 @@ class Vacuum
         timeWork = timeSet + currentTime;
         timeFlag = true;
         }*/
-
     }
-
 };
 
 class Level {
@@ -294,7 +292,16 @@ void reciveMessage(void) {
       i++;
       _delay_ms(10);
     }
-    // Serial.println(String(data));
+    String message [20];
+    int count = 0;
+    for (int j = 0; j < String(data).length(); j++) {
+      if (data[j] == ',') {
+        count++;
+        j++;
+      }
+      message [count] += data[j];
+    }
+    
     sscanf(data, "%[^','],%[^','], %[^','],%[^','],%[^','],%d", &unitID_in, &command_in, &data_one, &data_two, &data_three);
 
     int first, second;
@@ -305,7 +312,7 @@ void reciveMessage(void) {
     //sscanf(data_three, "%d", &third);
     // sscanf(data_one, "%d", &first);
     // sscanf(data_two, "%d", &second);
-    first = strtol(data_one, NULL, 0); //замена для atoi, т.к. некорректно работате с 32 битными
+    first = strtol(data_one, NULL, 0); //замена для atoi, т.к. некорректно работает с 32 битными
     second = strtol(data_two, NULL, 0);
     third = strtol(data_three, NULL, 0);
 
