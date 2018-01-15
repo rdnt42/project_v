@@ -29,9 +29,6 @@ namespace V_Project
         delegate void SetTextThermCallback(string text);                            //data from thermostat
 
 
-        String recordData;
-
-
         public Form1()
         {
             InitializeComponent();
@@ -95,9 +92,9 @@ namespace V_Project
                         switch (command_in)
                         {
                             case "DATA":
-                                textBox10L.Text = message[2];
-                                textBoxVac.Text = message[3];
-                                textBoxStg.Text = message[6];
+                                textBox10L.Text = message[3];
+                                textBoxVac.Text = message[4];
+                                textBoxStg.Text = message[7];
                                // textBoxVlvTwo.Text = message[5];
                                 //textBoxVac.Text = message[4];
                                 //textBoxStg.Text = message[6];
@@ -190,22 +187,7 @@ namespace V_Project
         }
 
 
-        private void btn_start_Click(object sender, EventArgs e)
-        {
-            myport.WriteLine("001,STR,1");
-            if (!timer1.Enabled == true)
-                timer1.Enabled = true;
-            // timer1.Enabled = true;
-            // btn_next_stage.Enabled = true;
-            // StreamWriter file = new StreamWriter("D:\\arduino_project\\vm1500\\data\\test.txt");
-            // file.Write( "we ");
-            //file.Close();
-        }
-
-        private void btn_stop_Click(object sender, EventArgs e)
-        {
-            myport.WriteLine("001,STP,1");
-        }
+       
 
 
         private void btn_open_Click(object sender, EventArgs e)
@@ -290,6 +272,25 @@ namespace V_Project
             sendPack(textBoxSend.Text);
              textBoxSend.Text = "";
 
+        }
+
+        private void btn_start_Click(object sender, EventArgs e)
+        {
+            // myport.WriteLine("001,BGN,1");
+            sendPack("BGN,1");
+            if (!timer1.Enabled == true)
+                timer1.Enabled = true;
+            // timer1.Enabled = true;
+            // btn_next_stage.Enabled = true;
+            // StreamWriter file = new StreamWriter("D:\\arduino_project\\vm1500\\data\\test.txt");
+            // file.Write( "we ");
+            //file.Close();
+        }
+
+        private void btn_stop_Click(object sender, EventArgs e)
+        {
+            //  myport.WriteLine("001,END,1");
+            sendPack("END,1");
         }
 
         private void btn_read_Click(object sender, EventArgs e)
@@ -397,7 +398,7 @@ namespace V_Project
         private void timer2_Tick(object sender, EventArgs e)
         {
             StreamWriter file = new StreamWriter("D:\\arduino_project\\vm1500\\data\\classTest.txt", true);
-            file.WriteLine(recordData + "," + DateTime.Now.ToString() + '\n');
+           // file.WriteLine(recordData + "," + DateTime.Now.ToString() + '\n');
             file.Close();
         }
 
@@ -406,6 +407,14 @@ namespace V_Project
             if (checkBoxTherm.Checked)
             {
             }
+        }
+
+        private void btnReset_Click(object sender, EventArgs e)
+        {
+            myport.DiscardInBuffer();
+            myport.DiscardOutBuffer();
+            myport.Close();
+            myport.Open();
         }
     }
 }
