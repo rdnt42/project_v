@@ -105,6 +105,7 @@
             this.checkBoxTherm = new System.Windows.Forms.CheckBox();
             this.serialPortTherm = new System.IO.Ports.SerialPort(this.components);
             this.comboBoxThermo = new System.Windows.Forms.ComboBox();
+            this.btnReset = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.SuspendLayout();
@@ -859,6 +860,7 @@
             // progressBarLvl
             // 
             this.progressBarLvl.Location = new System.Drawing.Point(509, 602);
+            this.progressBarLvl.Maximum = 1;
             this.progressBarLvl.Name = "progressBarLvl";
             this.progressBarLvl.Size = new System.Drawing.Size(38, 23);
             this.progressBarLvl.TabIndex = 73;
@@ -885,12 +887,23 @@
             this.comboBoxThermo.Size = new System.Drawing.Size(121, 21);
             this.comboBoxThermo.TabIndex = 75;
             // 
+            // btnReset
+            // 
+            this.btnReset.Location = new System.Drawing.Point(181, 103);
+            this.btnReset.Name = "btnReset";
+            this.btnReset.Size = new System.Drawing.Size(75, 23);
+            this.btnReset.TabIndex = 76;
+            this.btnReset.Text = "reset";
+            this.btnReset.UseVisualStyleBackColor = true;
+            this.btnReset.Click += new System.EventHandler(this.btnReset_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSize = true;
             this.ClientSize = new System.Drawing.Size(791, 727);
+            this.Controls.Add(this.btnReset);
             this.Controls.Add(this.comboBoxThermo);
             this.Controls.Add(this.checkBoxTherm);
             this.Controls.Add(this.progressBarLvl);
@@ -1050,6 +1063,7 @@
         private System.Windows.Forms.CheckBox checkBoxTherm;
         private System.IO.Ports.SerialPort serialPortTherm;
         private System.Windows.Forms.ComboBox comboBoxThermo;
+        private System.Windows.Forms.Button btnReset;
     }
 }
 

@@ -27,13 +27,7 @@ namespace V_Project
         //private SerialPort mytermo;                                               //COM thermostat
         delegate void SetTextMainCallback(string text);                             //data from arduino  
         delegate void SetTextThermCallback(string text);                            //data from thermostat
-        String[] message;                                                           //Read data from MK
 
-        String unitID_in;
-        String command_in;
-        String data_id;
-        String data_state;
-        String recordData;
 
         public Form1()
         {
@@ -59,37 +53,13 @@ namespace V_Project
             }
             else
             {
-                textBoxRead.Text = "NOT OK"; // выводим сообщение если устройство откл. (тоже для удобства)
-            }
-        }
-
-        void arduinolProtocol(string command)
-        {
-            switch (command)
-            {
-                case "DATA":
-                    textBox10L.Text = message[2];
-                    textBoxVac.Text = message[3];
-                    textBoxVlvOne.Text = message[4];
-                    textBoxVlvTwo.Text = message[5];
-                    //textBoxVac.Text = message[4];
-                    //textBoxStg.Text = message[6];
-                    break;
-                case "VLV":
-                    if (data_id == "1")
-                        progressBarVlv1.Value = Convert.ToInt16(data_state);
-                    else if (data_id == "2")
-                        progressBarVlv2.Value = Convert.ToInt16(data_state);
-                    break;
-                case "LVL":
-                    if (data_id == "1")
-                        progressBarLvl.Value = Convert.ToInt16(data_state);
-                    break;
+             //   textBoxRead.Text = "NOT OK"; // выводим сообщение если устройство откл. (тоже для удобства)
             }
         }
 
         private void SetTextMain(string text)
         {
+
             // InvokeRequired required compares the thread ID of the
             // calling thread to the thread ID of the creating thread.
             // If these threads are different, it returns true.
@@ -100,17 +70,66 @@ namespace V_Project
             }
             else
             {
-                unitID_in = message[0];
-                command_in = message[1];
-                data_id = message[2];
-                data_state = message[3];
-                //this.textBoxRead.Text = text;
+                String[] message = new String[20];                                          //split array from MK
+                int checkSum;
+                String unitID_in;
+                String command_in;
+                String data_id;
+                String data_state;
+
+                try
+                {
+                    message = text.Split(',');                                              //split data from serial to message array
+                    checkSum = Convert.ToInt32(message[message.Length - 2]);                //checkSum,STR from MK
+                   
+                    if (text.Length == checkSum)// checkSum)
+                    {
+                        unitID_in = message[1];
+                        command_in = message[2];
+                        data_id = message[3];
+                        data_state = message[4];                      
+
+                        switch (command_in)
+                        {
+                            case "DATA":
+                                textBox10L.Text = message[3];
+                                textBoxVac.Text = message[4];
+                                textBoxStg.Text = message[7];
+                               // textBoxVlvTwo.Text = message[5];
+                                //textBoxVac.Text = message[4];
+                                //textBoxStg.Text = message[6];
+                                break;
+                            case "VLV":
+                                if (data_id == "1")
+                                    progressBarVlv1.Value = Convert.ToInt16(data_state);
+                                else if (data_id == "2")
+                                    progressBarVlv2.Value = Convert.ToInt16(data_state);
+                                break;
+                            case "LVL":
+                                if (data_id == "1")
+                                    progressBarLvl.Value = Convert.ToInt16(data_state);
+                                break;
+                            case "VAC":
+                                if (data_id == "1")
+                                    progressBarVac.Value = Convert.ToInt16(data_state);
+                                break;
+                        }
+                    }
+                    else {
+                       //send retry
+                    }
+                       
+                }
+                catch
+                {
+                
+                }
                 textBoxRead.Text = text;
-                arduinolProtocol(command_in);
+
             }
         }
 
-        private void SetTextTherm(string text)
+      /*  private void SetTextTherm(string text)
         {
             if (this.textBoxRead.InvokeRequired)
             {
@@ -124,34 +143,25 @@ namespace V_Project
             }
 
             textBoxRead.Text = text;
-        }
+        }*/
 
         private void serialPortArd_DataReceived(object sender, System.IO.Ports.SerialDataReceivedEventArgs e)
         {
             String data = myport.ReadExisting();
-            while (data.IndexOf("SBIT") <= 0)
+            while (data.IndexOf("STP") <= 0)
             {
                 data = data + myport.ReadExisting();
             }
-            recordData = data;                                                          //for timer2 record
-            StreamWriter file = new StreamWriter("D:\\arduino_project\\vm1500\\data\\classTest.txt", true);
-            file.WriteLine(recordData + "," + DateTime.Now.ToString() + '\n');
-            file.Close();
-            try
-            {
-                message = data.Split(',');                                              //split data from serial
-            }
-            catch
-            {
-                // textBox2.Text = "Unknown format";
-                //write to textBox2
-            }
 
+            StreamWriter file = new StreamWriter("D:\\arduino_project\\vm1500\\data\\classTest.txt", true);
+            file.WriteLine(data + "," + DateTime.Now.ToString() + '\n');
+            file.Close();
             SetTextMain(data);
+            //recordData = data;                                                          //for timer2 record
         }
 
         public void myEventCacher(object sender, EventArgs e)
-        {
+        {/*
 
             if (USBHIDDRIVER.USBInterface.usbBuffer.Count > 0)
             {
@@ -173,24 +183,11 @@ namespace V_Project
                 command_in = "ANSWERSET";
                 SetTextTherm(text);
                 usb.stopRead();
-            }
+            }*/
         }
 
 
-        private void btn_start_Click(object sender, EventArgs e)
-        {
-            myport.WriteLine("001,STR,1");
-            // timer1.Enabled = true;
-            // btn_next_stage.Enabled = true;
-            // StreamWriter file = new StreamWriter("D:\\arduino_project\\vm1500\\data\\test.txt");
-            // file.Write( "we ");
-            //file.Close();
-        }
-
-        private void btn_stop_Click(object sender, EventArgs e)
-        {
-            myport.WriteLine("001,STOP,1");
-        }
+       
 
 
         private void btn_open_Click(object sender, EventArgs e)
@@ -235,6 +232,8 @@ namespace V_Project
             myport.Close();
             openSerial(false);
             progressBarState.Value = 0;
+            if (timer1.Enabled == true)
+                timer1.Enabled = false;
         }
 
         void openSerial(bool state)
@@ -260,16 +259,44 @@ namespace V_Project
             textBoxSend.Enabled = state;
         }
 
+        void sendPack(String pack)
+        {
+            String formPack = "STR,001," + pack + ",";
+            formPack +=(formPack.Length +6).ToString() + ",STP";
+            myport.WriteLine(formPack);
+        }
+
         private void btn_send_Click(object sender, EventArgs e)
         {
-            myport.WriteLine(textBoxSend.Text);
-            textBoxSend.Text = "";
+            // myport.WriteLine(textBoxSend.Text);
+            sendPack(textBoxSend.Text);
+             textBoxSend.Text = "";
 
+        }
+
+        private void btn_start_Click(object sender, EventArgs e)
+        {
+            // myport.WriteLine("001,BGN,1");
+            sendPack("BGN,1");
+            if (!timer1.Enabled == true)
+                timer1.Enabled = true;
+            // timer1.Enabled = true;
+            // btn_next_stage.Enabled = true;
+            // StreamWriter file = new StreamWriter("D:\\arduino_project\\vm1500\\data\\test.txt");
+            // file.Write( "we ");
+            //file.Close();
+        }
+
+        private void btn_stop_Click(object sender, EventArgs e)
+        {
+            //  myport.WriteLine("001,END,1");
+            sendPack("END,1");
         }
 
         private void btn_read_Click(object sender, EventArgs e)
         {
-            myport.WriteLine("001,GET,DATA");
+            // myport.WriteLine("001,GET,DATA");
+            sendPack("GET,DATA");
             if (!timer1.Enabled == true)
                 timer1.Enabled = true;
         }
@@ -277,16 +304,19 @@ namespace V_Project
         private void btn_stage_Click(object sender, EventArgs e)
         {
             String text = comboBoxStage.Text;
-            myport.WriteLine("001,STG," + text);
+            //myport.WriteLine("001,STG," + text);
+            sendPack("STG," + text);
         }
         private void btn_next_stage_Click(object sender, EventArgs e)
         {
-            myport.WriteLine("001,STG,NEXT");
+            // myport.WriteLine("001,STG,NEXT");
+            sendPack("STG,NEXT");
         }
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            myport.WriteLine("001,GET,DATA");
+            // myport.WriteLine("001,GET,DATA");
+            sendPack("GET,DATA");
         }
 
         private void btnTermOn_Click(object sender, EventArgs e)
@@ -304,45 +334,53 @@ namespace V_Project
 
         private void btnVacOn_Click(object sender, EventArgs e)
         {
-            myport.WriteLine("001,VAC," + textBoxVacSet.Text);
+            // myport.WriteLine("001,VAC,1," + textBoxVacSet.Text + ",1");
+            sendPack("VAC,1," + textBoxVacSet.Text + ",1");
         }
 
         private void btnVacOff_Click(object sender, EventArgs e)
         {
-            myport.WriteLine("001,VAC,750");
+            //myport.WriteLine("001,VAC,0,750,1");
+            sendPack("VAC,0,750,1");
         }
 
         private void btnVlv1On_Click(object sender, EventArgs e)
         {
-            myport.WriteLine("001,VLV,1,1," + textBoxVlv1.Text);
+            // myport.WriteLine("001,VLV,1," + textBoxVlv1.Text + ",1");
+            sendPack("VLV,1," + textBoxVlv1.Text + ",1");
         }
 
         private void btnVlv1Off_Click(object sender, EventArgs e)
         {
-            myport.WriteLine("001,VLV,0,1," + textBoxVlv1.Text);
+            // myport.WriteLine("001,VLV,0," + textBoxVlv1.Text + ",1");
+            sendPack("VLV,0," + textBoxVlv1.Text + ",1");
         }
 
         private void btnVlv2On_Click(object sender, EventArgs e)
         {
-            myport.WriteLine("001,VLV,1,2," + textBoxVlv2.Text);
+            // myport.WriteLine("001,VLV,1," + textBoxVlv2.Text + ",2");
+            sendPack("VLV,1," + textBoxVlv2.Text + ",2");
         }
 
         private void btnVlv2Off_Click(object sender, EventArgs e)
         {
-            myport.WriteLine("001,VLV,0,2," + textBoxVlv2.Text);
+            // myport.WriteLine("001,VLV,0," + textBoxVlv2.Text + ",2");
+            sendPack("VLV,0," + textBoxVlv2.Text + ",2");
         }
 
 
         private void btnLaserOn_Click(object sender, EventArgs e)
         {
-            myport.WriteLine("001,LVL,1");
+           // myport.WriteLine("001,LVL,1");
+            sendPack("LVL,1");
             btnLaserOn.Enabled = false;
             btnLaserOff.Enabled = true;
         }
 
         private void btnLaserOff_Click(object sender, EventArgs e)
         {
-            myport.WriteLine("001,LVL,0");
+            //myport.WriteLine("001,LVL,0");
+            sendPack("LVL,0");
             btnLaserOn.Enabled = true;
             btnLaserOff.Enabled = false;
         }
@@ -360,7 +398,7 @@ namespace V_Project
         private void timer2_Tick(object sender, EventArgs e)
         {
             StreamWriter file = new StreamWriter("D:\\arduino_project\\vm1500\\data\\classTest.txt", true);
-            file.WriteLine(recordData + "," + DateTime.Now.ToString() + '\n');
+           // file.WriteLine(recordData + "," + DateTime.Now.ToString() + '\n');
             file.Close();
         }
 
@@ -369,6 +407,14 @@ namespace V_Project
             if (checkBoxTherm.Checked)
             {
             }
+        }
+
+        private void btnReset_Click(object sender, EventArgs e)
+        {
+            myport.DiscardInBuffer();
+            myport.DiscardOutBuffer();
+            myport.Close();
+            myport.Open();
         }
     }
 }

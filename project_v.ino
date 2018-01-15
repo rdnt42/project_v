@@ -16,10 +16,19 @@
 //#include "U8glib.h"
 #include "get.h"
 
+char data[40];         //DATA BUFFER
+uint8_t i = 0;         //char data count
+//char unitID_in[10];    // ID device
+//char command_in[10];   //command, 3 letters
+//char data_one[10];     //data
+//char data_two[10];
+//char data_three [10];
+
 
 ////////////////////TIMER SETUP////////////////////
 int _timer = TIMER_DEFAULT;
 uint32_t currentTime = 0;
+
 
 ////////////////////STAGE SETUP////////////////////
 int systemState = 0;           //start state
@@ -45,6 +54,13 @@ enum STATE { //system state
 
 };
 
+void sendPack(String pack) {
+  String formPack = "STR,001," + pack + ",";
+  formPack += String (formPack.length() + 6) + ",STP";
+  Serial.print (formPack);
+  _delay_ms(50);
+}
+
 class Valve
 {
 
@@ -54,7 +70,6 @@ class Valve
 
   public: bool valveState;     //ON/OFF state
     bool lastValveState;       // if lastValveState!=valveState => state changed from serial or systemState
-
 
     bool startFlag;           //first time flag
     bool timeFlag;            //set time flag
@@ -71,8 +86,8 @@ class Valve
       valvePin24 = pin2;
       pinMode (valvePin12, OUTPUT);
       pinMode (valvePin24, OUTPUT);
-      valveState = HIGH;             
-      lastValveState = valveState;      
+      valveState = HIGH;
+      lastValveState = valveState;
       digitalWrite(valvePin12, HIGH);
       digitalWrite(valvePin24, HIGH);
       timeOne = 2;
@@ -91,14 +106,16 @@ class Valve
       }
       if (lastValveState != valveState) {
         lastValveState = valveState;
-        Serial.print("001,VLV," + String(valveId) + "," + String(!valveState) + ",SBIT");
+        //Serial.print("001,VLV," + String(valveId) + "," + String(!valveState) + ",SBIT");
+        // _delay_ms(50);
+        sendPack("VLV," + String(valveId) + "," + String(!valveState));
       }
 
       digitalWrite(valvePin12, valveState);
-      return (!valveState);
+      return (valveState);
     }
 
-    void Update (bool state, uint32_t timeSet) { //update state from serial or systemState
+    void Update (bool state, uint32_t timeSet = 0) { //update state from serial or systemState
       valveState = !state;
       startFlag = state;
       timeStart = timeOne + currentTime;
@@ -113,10 +130,10 @@ class Valve
 
 class Vacuum
 {
-
     int vacPinSet;            //PWM pin to vac
     int vacPinRead;           //analog read from vac station
     bool vacState;            //ON/OFF state
+    bool lastVacState;
     int vacSet;               //set vac value
     uint32_t timeWork;        //set work time
     bool timeFlag;            //flag to ON vac with time
@@ -128,9 +145,9 @@ class Vacuum
       vacPinSet = pinSet;
       vacPinRead = pinRead;
       vacState = false;
+      lastVacState = vacState;
       vacSet = 750;
       timeFlag = false;
-
     }
 
     void GetVac (void) {
@@ -141,8 +158,8 @@ class Vacuum
           for (int i = 0; i < 100; i++) {
            currVac += analogRead (vacPinRead);
           }
-          currVac = currVac / 100;
-          vacValue = map(currVac, 140, 850, 40, 756);*/
+          currVac = currVac / 100;*/
+        vacValue = map(vacValue, 100, 850, 0, 755);
         millisPrev = millis();
       }
     }
@@ -153,8 +170,14 @@ class Vacuum
         timeFlag = false;
       }
 
+      if (lastVacState != vacState) {
+        lastVacState = vacState;
+        //Serial.print("001,VAC,1," + String(vacState) + ",SBIT");
+        // _delay_ms(50);
+        sendPack("VAC,1," + String(vacState));
+      }
 
-      if (vacState && ((vacValue - vacSet ) > 0)) { 
+      if (vacState && ((vacValue - vacSet ) > 0)) {
         analogWrite (vacPinSet, 255);
       }
 
@@ -171,15 +194,14 @@ class Vacuum
       }
     }
 
-    void Update (bool state, uint32_t timeSet) {
+    void Update (bool state, uint32_t valueSet = 750) {
       vacState = state;
-      if (timeSet != 0) {
+      vacSet = valueSet;
+      /*if (timeSet != 0) {
         timeWork = timeSet + currentTime;
         timeFlag = true;
-      }
-
+        }*/
     }
-
 };
 
 class Level {
@@ -216,7 +238,9 @@ class Level {
 
       if (lastLevelState != levelState) {
         lastLevelState = levelState;
-        Serial.print("001,LVL," + String(levelId) + "," + String(levelState) + ",SBIT");
+        //Serial.print("001,LVL," + String(levelId) + "," + String(levelState) + ",SBIT");
+        sendPack ("LVL," + String(levelId) + "," + String(levelState));
+        //  _delay_ms(50);
       }
       digitalWrite (levelPinLaser, levelState);
       if (analogRead(levelPinReader) > 600)
@@ -232,12 +256,13 @@ class Level {
     }
 };
 
+////////////////////CREATE NEW OBJ///////////////////////////////////////////////////
 //U8GLIB_ST7920_128X64_1X u8g(35, 33, 31, U8G_PIN_NONE);
 LiquidCrystal_I2C lcd(0x27, 16, 4);
 Valve vlvOne(A8, A9, 1);
 Valve vlvTwo(A10, A11, 2);
 
-Vacuum vacOne (8, A0);
+Vacuum vacOne (11, A0);
 
 Level lvlOne (22, A4, A5, 1);
 
@@ -246,80 +271,113 @@ void getState (void) {
   vacOne.GetVac();
 }
 
+void resetAll() {
+  lvlOne.Update(false);
+  vlvOne.Update(0, 0);
+  vlvTwo.Update(0, 0);
+  vacOne.Update (false);
+}
+
 void reciveMessage(void) {
   ////////////////////SERIAL PROTOCOL/////////////////
-  //example request 001,ID,COMMAND,DATA_ONE,DATA_TWO,DATA_THREE
-  //example answer  001,ID,COMMAND,DATA_ONE,DATA_TWO,DATA_THREE,SBIT
-  char data[20];         //DATA BUFFER
-  char unitID_in[10];    // ID device
-  char command_in[10];   //command, 3 letters
-  char data_one[10];     //data
-  char data_two[10];
-  char data_three [10];
-  uint8_t i = 0;
+  //example send    STR,001,ID,COMMAND,DATA_ONE,DATA_TWO,DATA_THREE,STP
+  //example answer  STR,002,ID,COMMAND,DATA_ONE,DATA_TWO,DATA_THREE,STP
+  //STR,001,VAC,1,750,1,26,STP
+  
   if (Serial.available() > 0) {
     while (Serial.available()) {
       data [i] = Serial.read();
       i++;
       _delay_ms(10);
     }
-    // Serial.println(String(data));
-    sscanf(data, "%[^','],%[^','], %[^','],%[^','],%[^','],%d", &unitID_in, &command_in, &data_one, &data_two, &data_three);
 
-    int first, second;
-    uint32_t third;                //переводит блоки data в int
-
-
-    // Serial.println (String(data_one) + " " + String(sizeof(data_two)) + " " + String(sizeof(data_three)));
-    //sscanf(data_three, "%d", &third);
-    // sscanf(data_one, "%d", &first);
-    // sscanf(data_two, "%d", &second);
-    first = strtol(data_one, NULL, 0); //замена для atoi, т.к. некорректно работате с 32 битными
-    second = strtol(data_two, NULL, 0);
-    third = strtol(data_three, NULL, 0);
-
-    if (String(command_in) == "STR") {
-      systemState = 1;
+    String message [20];
+    int count = 0;
+    //Serial.println(String(data).length());
+    for (int j = 0; j < String(data).length(); j++) {
+      if (data[j] == ',') {
+        count++;
+        j++;
+      }
+      message [count] += data[j];
+      if (message [count] == "STP")
+        break;
     }
-    else if (String(command_in) == "GET") {
-      Serial.print("001,DATA," + String(tempOne) + "," + String(vacOne.vacValue) + "," + String(vlvOne.valveState) + "," + String(vlvTwo.valveState) + "," + "SBIT");
+    // Serial.println (String(message [count-1] ) + " " + String(String(data).length() - 1));
+    // Serial.print(String( message [1]) + " " + String(message [2]) + " " + String(message [count - 1]) + " " + String(message [3]) + " " + String(message [4]) + " " + String(message [5] ));
+    String unitID_in = message [1];
+    String command_in = message [2];
+    int checkSum = message [count - 1].toInt();
+    int first = message [3].toInt();
+    uint32_t second = message [4].toInt();
+    int third = message [5].toInt();
 
+    if ( checkSum == String(data).length() - 1) {
+      if (String(command_in) == "BGN") {
+        systemState = STAGE1;
+      }
+
+      if (String(command_in) == "END") {
+        systemState = SYS_IDLE;
+      }
+
+      if (String(command_in) == "STG") {
+        resetAll ();
+        systemState ++;
+      }
+
+      else if (String(command_in) == "GET") {
+        sendPack("DATA," + String(tempOne) + "," + String(vacOne.vacValue) + "," + String(vlvOne.valveState) + ","
+                 + String(vlvTwo.valveState) + "," + String(systemState));
+      }
+
+      else if (String(command_in) == "VAC") {
+        if (third == 1)
+          vacOne.Update(first, second);
+      }
+
+      else if (String(command_in) == "AIR") {
+
+      }
+
+      else if (String(command_in) == "VLV") {
+        if (third == 1)
+          vlvOne.Update(first, second);
+
+        else if (third == 2)
+          vlvTwo.Update(first, second);
+      }
+
+      else if (String(command_in) == "LVL") {
+        lvlOne.Update(first);
+      }
     }
-
-    else if (String(command_in) == "VAC") {
-
-      if (second == 1)
-        vacOne.Update(first, third);
+    else {
+      //try
     }
-
-    else if (String(command_in) == "AIR") {
-
-    }
-
-    else if (String(command_in) == "VLV") {
-
-      if (second == 1)
-        vlvOne.Update(first, third);
-
-      else if (second == 2)
-        vlvTwo.Update(first, third);
-
-
-      //Serial.println (String(third));
-    }
-
-    else if (String(command_in) == "LVL") {
-      lvlOne.Update(first);
-    }
-
-    // memset(&third, 0, sizeof(third));
+    memset(&data, 0, sizeof(data));
     Serial.flush();
+    i = 0;
   }
+}
+
+bool waitTime (uint32_t time) {
+  static uint32_t millisPrev;
+  int countTime = (int)currentTime - (int)time - (int)millisPrev;
+  // Serial.println (String(abs(countTime)));
+  //Serial.println (String((int32_t)(time + millisPrev - currentTime)) );
+  if ( (int32_t)(time + millisPrev - currentTime) <= 0 ) {
+    millisPrev = currentTime;
+    return true;
+  }
+  return false;
 }
 
 void timer_handle_interrupts(int timer) {
   currentTime++;                                    //timer count in sec
 }
+
+
 
 void setup() {
   Serial.begin(115200);
@@ -337,40 +395,92 @@ void loop() {
   lcd.setCursor(3, 0);
   lcd.clear();
   lcd.print(String(systemState));
-  switch (systemState) {                                //1,3,5,7,9,11... stage settings //2,4,6,8,10... stage start
+  switch (systemState) {                                     //1,3,5,7,9,11... stage settings //2,4,6,8,10... stage start
 
-    case WELCOME:                                             //reset all
-      // systemState++;
+
+    case WELCOME:                                            //reset all
+      //stop all
+      //systemState++;
       break;
 
     case STAGE1:
-      //time
-      vlvOne.Update (true, 53000);
+      vlvOne.Update(1, 0);
       systemState++;
       break;
 
     case STAGE2:
-      if (!vlvOne.Work())
+
+      if (waitTime(21600)) {//(59400))  {                                  //wait stage
+        vlvOne.Update(0, 0);
         systemState++;
+      }
       break;
 
     case STAGE3:
-      //state
+
+      vlvTwo.Update(1, 0);
+
       lvlOne.Update(true);
+      systemState++;
+      break;
+
+    case STAGE4:
+
+      if (lvlOne.Work()) {                                  //work while not TRUE
+
+        lvlOne.Update(false);
+        vlvTwo.Update(0, 0);
+        systemState++;
+      }
+      break;
+
+    case STAGE5:
+      // if (waitTime(3600))
+      systemState++;
+      break;
+
+    case STAGE6:
+      if (waitTime(600))
+        systemState++;
+      break;
+
+    case STAGE7:
+      //setThermostat (tempThermostat, REACTOR10, true);
+      lvlOne.Update(true);
+      vlvOne.Update(1, 0);
+      vlvTwo.Update(1, 0);
+      vacOne.Update (true);
+      systemState++;
+      break;
+
+    case STAGE8:
+      if (waitTime(666))
+        systemState++;
+      break;
+
+    case STAGE9:
+      lvlOne.Update(false);
+      vlvOne.Update(0, 0);
+      vlvTwo.Update(0, 0);
+      vacOne.Update (false);
       systemState++;
 
       break;
 
-    case STAGE4:
-      if (lvlOne.Work()) {
-        lvlOne.Update(false);
-        systemState++;
-      }
-       lvlOne.Work();           //work while not TRUE
+    case STAGE10:
+      if (waitTime(1600))
+        systemState = SYS_IDLE;
+      break;
+
+    case SYS_IDLE:
+      resetAll();
+      systemState = WELCOME;
+
       break;
   }
-//  vlvOne.Work ();
-//  vlvTwo.Work ();
-//lvlOne.Work();
- 
+  lvlOne.Work ();
+  vlvOne.Work ();
+  vlvTwo.Work ();
+  vacOne.Work ();
+  // Serial.println(analogRead(A0));
 }
